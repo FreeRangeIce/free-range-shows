@@ -188,7 +188,18 @@
     location.hash = hash;
   }
 
+
+  function markNav() {
+    const name = route().name;
+    const current = name === "settings" ? "#/settings" : name === "night" ? "#/night/new" : name === "home" ? "#/" : "";
+    document.querySelectorAll(".top-nav a").forEach((link) => {
+      if (current && link.getAttribute("href") === current) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
   function render() {
+    markNav();
     const r = route();
     if (r.name === "night") renderNight(r.id);
     else if (r.name === "act") renderAct(r.key);

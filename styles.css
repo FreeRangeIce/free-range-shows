@@ -49,6 +49,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   text-decoration: none;
   font: inherit;
 }
+.top-nav a[aria-current="page"] {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: #fff;
+}
 .btn-primary { background: var(--blood); border-color: var(--blood); color: #fff; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
 
