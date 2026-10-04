@@ -465,7 +465,14 @@
   }
 
   function setlistHref(url) {
-    return /^https:\/\//i.test(url || "") ? url : "https://www.setlist.fm/";
+    try {
+      const u = new URL(url);
+      const host = u.hostname.toLowerCase();
+      if (u.protocol === "https:" && (host === "setlist.fm" || host.endsWith(".setlist.fm"))) return u.href;
+    } catch {
+      /* homepage */
+    }
+    return "https://www.setlist.fm/";
   }
 
   function sourceLine(night) {
