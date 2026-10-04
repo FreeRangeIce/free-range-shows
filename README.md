@@ -2,7 +2,7 @@
 
 A separate PWA from FreeRangeMedia. Nights you attended or want. No account. No server.
 
-Local only until Micah says to put it on GitHub. The repo FreeRangeIce/free-range-shows did not exist when this branch was made, and this commit was not pushed.
+Published from main. The page is https://freerangeice.github.io/free-range-shows/.
 
 ## Guards
 
