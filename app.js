@@ -11,8 +11,6 @@
   const BACKUP_APP = "free-range-shows";
   const BACKUP_VERSION = 1;
   const KINDS = ["Concert", "Comedy", "Festival", "Musical", "Screening", "Other"];
-  const BAND_KINDS = new Set(["Concert", "Festival"]);
-
   const app = document.querySelector("#app");
 
   function uid() {
@@ -54,14 +52,40 @@
     }
   }
 
-  function writeStore(data) {
-    data.rev = (Number(data.rev) || 0) + 1;
+  function currentRev() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return 0;
+      return Number(JSON.parse(raw).rev) || 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /* Write only if rev is still the one we read. A second tab that wrote
+     in between makes this return false so the caller can re-read and merge. */
+  function writeStore(data, basedOnRev) {
+    if (currentRev() !== basedOnRev) return false;
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       nights: data.nights,
       acts: data.acts || {},
-      rev: data.rev,
+      rev: basedOnRev + 1,
     }));
-    return data;
+    return true;
+  }
+
+  function commitStore(mutator) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const before = readStore();
+      const next = {
+        nights: before.nights.map((n) => ({ ...n })),
+        acts: { ...before.acts },
+        rev: before.rev,
+      };
+      mutator(next);
+      if (writeStore(next, before.rev)) return true;
+    }
+    return false;
   }
 
   function readKeys() {
@@ -108,17 +132,17 @@
   }
 
   function upsertNight(night) {
-    const store = readStore();
-    const idx = store.nights.findIndex((n) => n.id === night.id);
-    if (idx >= 0) store.nights[idx] = night;
-    else store.nights.push(night);
-    writeStore(store);
+    return commitStore((store) => {
+      const idx = store.nights.findIndex((n) => n.id === night.id);
+      if (idx >= 0) store.nights[idx] = night;
+      else store.nights.push(night);
+    });
   }
 
   function deleteNight(id) {
-    const store = readStore();
-    store.nights = store.nights.filter((n) => n.id !== id);
-    writeStore(store);
+    return commitStore((store) => {
+      store.nights = store.nights.filter((n) => n.id !== id);
+    });
   }
 
   function actStats(store) {
@@ -215,6 +239,7 @@
       encore: [],
       bits: [],
       setlistId: "",
+      setlistUrl: "",
       updatedAt: "",
     };
   }
@@ -260,7 +285,7 @@
         <textarea id="encore">${esc((night.encore || []).join("\n"))}</textarea>
         <label for="bits">Bits</label>
         <textarea id="bits">${esc((night.bits || []).join("\n"))}</textarea>
-        <p class="hint">PLACEHOLDER: Comedy lookup does not fill bits.</p>
+        <p class="hint">Comedy lookup does not fill bits.</p>
         <div class="btn-row">
           <button class="btn" type="button" id="lookup">Lookup</button>
           <button class="btn btn-primary" type="submit">Save</button>
@@ -268,7 +293,7 @@
         </div>
         <p id="lookup-status" class="status" role="status"></p>
         <div id="lookup-choices" class="choices"></div>
-        ${night.setlistId ? `<p class="quiet">setlist.fm id ${esc(night.setlistId)}. PLACEHOLDER: Setlist from setlist.fm.</p>` : ""}
+        ${sourceLine(night)}
       </form>`;
 
     const form = document.querySelector("#night-form");
@@ -353,31 +378,31 @@
     const keys = readKeys();
     if (kind === "Concert") {
       if (!keys.setlist) {
-        statusEl.textContent = "PLACEHOLDER: Add the setlist.fm key in Settings. The night stays as typed.";
+        statusEl.textContent = "Add the setlist.fm key in Settings. The night stays as typed.";
         return;
       }
       if (!act || (!city && !date)) {
-        statusEl.textContent = "PLACEHOLDER: Enter an act and a city or a date, then look up.";
+        statusEl.textContent = "Enter an act and a city or a date, then look up.";
         return;
       }
       statusEl.textContent = "Looking up setlist.fm…";
       try {
         const rows = await searchSetlist(keys.setlist, act, city, date);
         if (!rows.length) {
-          statusEl.textContent = "PLACEHOLDER: No match. What you typed stays.";
+          statusEl.textContent = "No match. What you typed stays.";
           return;
         }
         showChoices(choices, rows, (row) => applySetlist(form, night, row));
-        statusEl.textContent = "PLACEHOLDER: Pick the night. Credit setlist.fm.";
+        statusEl.textContent = "Pick the night.";
       } catch (err) {
-        statusEl.textContent = "PLACEHOLDER: setlist.fm did not answer. What you typed stays.";
+        statusEl.textContent = "setlist.fm did not answer. What you typed stays.";
         statusEl.className = "status error";
       }
       return;
     }
     const query = act || form.querySelector("#tour").value.trim();
     if (!query) {
-      statusEl.textContent = "PLACEHOLDER: Enter an act or an event name, then look up.";
+      statusEl.textContent = "Enter an act or an event name, then look up.";
       return;
     }
     statusEl.textContent = "Looking up…";
@@ -387,7 +412,7 @@
         const rows = await searchTicketmaster(keys.ticketmaster, query, city, date);
         if (rows.length) {
           showChoices(choices, rows, (row) => applyEvent(form, row));
-          statusEl.textContent = "PLACEHOLDER: Pick the night. Credit Ticketmaster.";
+          statusEl.textContent = "Pick the night.";
           return;
         }
       } catch {
@@ -399,21 +424,21 @@
         const rows = await searchSeatGeek(keys.seatgeek, query, city);
         if (rows.length) {
           showChoices(choices, rows, (row) => applyEvent(form, row));
-          statusEl.textContent = "PLACEHOLDER: Pick the night. Credit SeatGeek.";
+          statusEl.textContent = "Pick the night.";
           return;
         }
       } catch {
-        statusEl.textContent = "PLACEHOLDER: No match. What you typed stays.";
+        statusEl.textContent = "No match. What you typed stays.";
         return;
       }
     }
     if (!keys.ticketmaster && !keys.seatgeek) {
-      statusEl.textContent = "PLACEHOLDER: Add a Ticketmaster or SeatGeek key in Settings. The night stays as typed.";
+      statusEl.textContent = "Add a Ticketmaster or SeatGeek key in Settings. The night stays as typed.";
       return;
     }
     statusEl.textContent = tmError
-      ? "PLACEHOLDER: No match. What you typed stays."
-      : "PLACEHOLDER: No match. What you typed stays.";
+      ? "No match. What you typed stays."
+      : "No match. What you typed stays.";
   }
 
   function showChoices(choices, rows, onPick) {
@@ -434,7 +459,33 @@
     setField(form, "songs", row.songs.join("\n"));
     setField(form, "encore", row.encore.join("\n"));
     night.setlistId = row.id;
+    night.setlistUrl = row.url || "";
     form.querySelector("#status").value = defaultStatus(row.date);
+    showSource(form, night);
+  }
+
+  function setlistHref(url) {
+    return /^https:\/\//i.test(url || "") ? url : "https://www.setlist.fm/";
+  }
+
+  function sourceLine(night) {
+    if (!night.setlistId && !night.setlistUrl) return "";
+    const href = setlistHref(night.setlistUrl);
+    return `<p class="quiet" id="source-line">Source: <a href="${esc(href)}">setlist on setlist.fm</a></p>`;
+  }
+
+  function showSource(form, night) {
+    const html = sourceLine(night);
+    const existing = form.querySelector("#source-line");
+    if (!html) {
+      if (existing) existing.remove();
+      return;
+    }
+    if (existing) {
+      existing.outerHTML = html;
+      return;
+    }
+    form.insertAdjacentHTML("beforeend", html);
   }
 
   function applyEvent(form, row) {
@@ -484,6 +535,7 @@
       const when = setlistDateToIso(item.eventDate);
       return {
         id: item.id || "",
+        url: item.url || "",
         date: when,
         city: cityName,
         venue: venue.name || "",
@@ -546,19 +598,13 @@
     const saved = store.acts[key] || {};
     const name = (stats && stats.name) || saved.name || key;
     const kind = (stats && stats.kind) || saved.kind || "Other";
-    const photo = saved.photoUrl || "";
+    const photo = saved.photoSource === "paste" ? (saved.photoUrl || "") : "";
     const photoBlock = photo
       ? `<img class="act-photo" alt="${esc(name)}" src="${esc(photo)}">`
       : `<div class="act-initials" aria-hidden="true">${esc(initials(name))}</div>`;
-    const credit = saved.photoSource === "wikimedia"
-      ? `<p class="quiet">PLACEHOLDER: Photo from Wikimedia.</p>`
-      : saved.photoSource === "paste"
-        ? `<p class="quiet">Photo URL you pasted.</p>`
-        : "";
     app.innerHTML = `
       <h1>${esc(name)}</h1>
       ${photoBlock}
-      ${credit}
       <p>${esc(kind)}</p>
       <p>${stats ? `${stats.nights} attended night${stats.nights === 1 ? "" : "s"}` : "No attended nights"}</p>
       <p>${stats && stats.last ? `Last seen ${esc(stats.last)}` : "Not seen yet"}</p>
@@ -566,67 +612,30 @@
         <label for="photo">Photo URL</label>
         <input id="photo" type="url" placeholder="https://" value="${esc(saved.photoUrl || "")}">
         <div class="btn-row"><button class="btn btn-primary" type="submit">Save photo</button></div>
+        <p id="photo-status" class="status" role="status"></p>
       </form>`;
     document.querySelector("#photo-form").addEventListener("submit", (event) => {
       event.preventDefault();
       const url = document.querySelector("#photo").value.trim();
-      if (url && !/^https:\/\//i.test(url)) return;
-      const latest = readStore();
-      if (!url) delete latest.acts[key];
-      else latest.acts[key] = { name, photoUrl: url, photoSource: "paste" };
-      writeStore(latest);
+      const note = document.querySelector("#photo-status");
+      if (url && !/^https:\/\//i.test(url)) {
+        note.textContent = "Photo URL must start with https.";
+        note.className = "status error";
+        return;
+      }
+      commitStore((latest) => {
+        if (!url) delete latest.acts[key];
+        else latest.acts[key] = { name, photoUrl: url, photoSource: "paste" };
+      });
       renderAct(key);
     });
-    if (!photo) fillActPhoto(key, name, kind);
-  }
-
-  async function fillActPhoto(key, name, kind) {
-    if (kind !== "Comedy" && !BAND_KINDS.has(kind)) return;
-    try {
-      let title = name;
-      if (BAND_KINDS.has(kind)) {
-        const artist = await musicBrainzArtist(name);
-        if (!artist) return;
-        title = artist;
-      }
-      const thumb = await wikiThumb(title);
-      if (!thumb) return;
-      const latest = readStore();
-      if (latest.acts[key] && latest.acts[key].photoUrl) return;
-      latest.acts[key] = { name, photoUrl: thumb, photoSource: "wikimedia" };
-      writeStore(latest);
-      if (route().name === "act" && route().key === key) renderAct(key);
-    } catch {
-      /* initials stay */
-    }
-  }
-
-  async function musicBrainzArtist(name) {
-    const query = 'artist:"' + name.replace(/"/g, "") + '"';
-    const res = await fetch("https://musicbrainz.org/ws/2/artist/?fmt=json&limit=1&query=" + encodeURIComponent(query), {
-      headers: { Accept: "application/json", "User-Agent": "FreeRangeShows/0.1 (https://freerangeice.github.io/free-range-shows/)" },
-    });
-    if (!res.ok) return "";
-    const data = await res.json();
-    const hit = data.artists && data.artists[0];
-    if (!hit || Number(hit.score) < 80) return "";
-    return hit.name || "";
-  }
-
-  async function wikiThumb(title) {
-    const res = await fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")));
-    if (!res.ok) return "";
-    const data = await res.json();
-    const src = data.thumbnail && data.thumbnail.source;
-    if (!src || !/^https:\/\/upload\.wikimedia\.org\//.test(src)) return "";
-    return src;
   }
 
   function renderSettings() {
     const keys = readKeys();
     app.innerHTML = `
       <h1>Settings</h1>
-      <p>PLACEHOLDER: Keys stay in this browser only. They are not in the backup file. There is no server.</p>
+      <p>Keys stay in this browser and are not in the backup file. A lookup sends that key to setlist.fm, Ticketmaster, or SeatGeek. This page has no server of its own.</p>
       <form id="keys-form">
         <label for="setlist">setlist.fm key</label>
         <input id="setlist" type="password" autocomplete="off" value="${esc(keys.setlist)}">
@@ -638,7 +647,7 @@
         <p id="keys-status" class="status" role="status"></p>
       </form>
       <h2>Backup</h2>
-      <p>PLACEHOLDER: This file is only a FreeRangeShows backup. A FreeRangeMedia file will not load.</p>
+      <p>This file is only a FreeRangeShows backup. A FreeRangeMedia file will not load.</p>
       <div class="btn-row">
         <button class="btn" type="button" id="backup">Back up</button>
         <label class="btn" for="restore-file">Restore</label>
@@ -728,7 +737,10 @@
     yes.onclick = () => {
       const nights = data.nights.map(cleanNight).filter((n) => n.id && n.date);
       const acts = data.acts && typeof data.acts === "object" ? data.acts : {};
-      writeStore({ nights, acts, rev: readStore().rev });
+      commitStore((store) => {
+        store.nights = nights;
+        store.acts = acts;
+      });
       close();
       const line = document.querySelector("#backup-status");
       if (line) {
@@ -758,11 +770,18 @@
       encore: Array.isArray(raw.encore) ? raw.encore.map(String) : [],
       bits: Array.isArray(raw.bits) ? raw.bits.map(String) : [],
       setlistId: String(raw.setlistId || ""),
+      setlistUrl: String(raw.setlistUrl || ""),
       updatedAt: String(raw.updatedAt || ""),
     };
   }
 
   window.addEventListener("hashchange", render);
+  window.addEventListener("storage", (event) => {
+    if (event.key !== STORAGE_KEY) return;
+    const name = route().name;
+    if (name === "night" || name === "settings") return;
+    render();
+  });
   render();
 
   if ("serviceWorker" in navigator) {
