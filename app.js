@@ -154,9 +154,24 @@
     });
   }
 
+  function actStillHasNights(store, actKey) {
+    return store.nights.some((n) => (n.bill || []).some((name) => norm(name) === actKey));
+  }
+
   function deleteNight(id) {
     return commitStore((store) => {
+      const doomed = store.nights.find((n) => n.id === id);
       store.nights = store.nights.filter((n) => n.id !== id);
+      if (!doomed) return;
+      const seen = new Set();
+      for (const name of doomed.bill || []) {
+        const key = norm(name);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        if (!actStillHasNights(store, key) && store.acts && key in store.acts) {
+          delete store.acts[key];
+        }
+      }
     });
   }
 

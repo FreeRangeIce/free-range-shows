@@ -142,5 +142,5 @@ textarea { min-height: 6rem; resize: vertical; }
 
 @media (min-width: 768px) {
   .top, main, .foot { padding-left: 1.5rem; padding-right: 1.5rem; }
-  main { max-width: 46rem; }
+  main, .foot { max-width: 46rem; }
 }
