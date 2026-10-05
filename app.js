@@ -94,14 +94,29 @@
       const raw = localStorage.getItem(KEYS_KEY);
       const data = raw ? JSON.parse(raw) : {};
       return {
-        setlist: String(data.setlist || ""),
         ticketmaster: String(data.ticketmaster || ""),
         seatgeek: String(data.seatgeek || ""),
       };
     } catch {
-      return { setlist: "", ticketmaster: "", seatgeek: "" };
+      return { ticketmaster: "", seatgeek: "" };
     }
   }
+
+  /* v3 kept a setlist.fm key here. The relay holds it now, so drop it on load. */
+  function dropOldSetlistKey() {
+    try {
+      const raw = localStorage.getItem(KEYS_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data && typeof data === "object" && "setlist" in data) {
+        delete data.setlist;
+        localStorage.setItem(KEYS_KEY, JSON.stringify(data));
+      }
+    } catch {
+      /* unreadable keys stay as they are */
+    }
+  }
+  dropOldSetlistKey();
 
   function writeKeys(keys) {
     localStorage.setItem(KEYS_KEY, JSON.stringify({
@@ -655,7 +670,7 @@
     const keys = readKeys();
     app.innerHTML = `
       <h1>Settings</h1>
-      <p>PLACEHOLDER Concert lookup goes through a FreeRangeShows relay. The setlist.fm key is not kept in this browser or in the backup file. Ticketmaster and SeatGeek keys stay in this browser and are not in the backup file. A lookup sends those keys to Ticketmaster or SeatGeek. This page has no server of its own for nights.</p>
+      <p>Concert lookup goes through a FreeRangeShows relay on Cloudflare. The relay holds the setlist.fm key, so it is not in this browser or the backup file. Ticketmaster and SeatGeek keys stay in this browser and are not in the backup file. A lookup sends those keys to Ticketmaster or SeatGeek.</p>
       <form id="keys-form">
         <label for="ticketmaster">Ticketmaster Discovery key</label>
         <input id="ticketmaster" type="password" autocomplete="off" value="${esc(keys.ticketmaster)}">
