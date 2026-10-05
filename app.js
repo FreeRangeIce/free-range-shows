@@ -394,17 +394,22 @@
       del.addEventListener("click", () => {
         const store = readStore();
         const bill = night.bill || [];
-        const lastForAct = bill.some((name) => {
+        const losingPhotoActs = [];
+        for (const name of bill) {
           const key = norm(name);
-          if (!key || !(store.acts && key in store.acts)) return false;
+          if (!key || !(store.acts && key in store.acts)) continue;
+          if (losingPhotoActs.includes(key)) continue;
           const others = store.nights.some((n) =>
             n.id !== night.id && (n.bill || []).some((b) => norm(b) === key)
           );
-          return !others;
-        });
-        const msg = lastForAct
-          ? "Delete this night? It is the last night for this act, so its photo is deleted too."
-          : "Delete this night?";
+          if (!others) losingPhotoActs.push(key);
+        }
+        let msg = "Delete this night?";
+        if (losingPhotoActs.length === 1) {
+          msg = "Delete this night? It is the last night for this act, so its photo is deleted too.";
+        } else if (losingPhotoActs.length > 1) {
+          msg = "Delete this night? It is the last night for these acts, so their photos are deleted too.";
+        }
         if (!window.confirm(msg)) return;
         deleteNight(night.id);
         go("#/");
