@@ -392,7 +392,20 @@
     const del = document.querySelector("#delete");
     if (del) {
       del.addEventListener("click", () => {
-        if (!window.confirm("Delete this night?")) return;
+        const store = readStore();
+        const bill = night.bill || [];
+        const lastForAct = bill.some((name) => {
+          const key = norm(name);
+          if (!key || !(store.acts && key in store.acts)) return false;
+          const others = store.nights.some((n) =>
+            n.id !== night.id && (n.bill || []).some((b) => norm(b) === key)
+          );
+          return !others;
+        });
+        const msg = lastForAct
+          ? "Delete this night? It is the last night for this act, so its photo is deleted too."
+          : "Delete this night?";
+        if (!window.confirm(msg)) return;
         deleteNight(night.id);
         go("#/");
       });
