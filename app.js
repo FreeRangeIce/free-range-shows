@@ -8,6 +8,7 @@
 
   const STORAGE_KEY = "freerangeshows-v1";
   const KEYS_KEY = "freerangeshows-keys";
+  const SETLIST_RELAY = "https://frs-setlist.freerangeice.workers.dev/setlists";
   const BACKUP_APP = "free-range-shows";
   const BACKUP_VERSION = 1;
   const KINDS = ["Concert", "Comedy", "Festival", "Musical", "Screening", "Other"];
@@ -104,7 +105,6 @@
 
   function writeKeys(keys) {
     localStorage.setItem(KEYS_KEY, JSON.stringify({
-      setlist: keys.setlist || "",
       ticketmaster: keys.ticketmaster || "",
       seatgeek: keys.seatgeek || "",
     }));
@@ -388,17 +388,13 @@
     const act = bill[0] || "";
     const keys = readKeys();
     if (kind === "Concert") {
-      if (!keys.setlist) {
-        statusEl.textContent = "Add the setlist.fm key in Settings. The night stays as typed.";
-        return;
-      }
       if (!act || (!city && !date)) {
         statusEl.textContent = "Enter an act and a city or a date, then look up.";
         return;
       }
       statusEl.textContent = "Looking up setlist.fm…";
       try {
-        const rows = await searchSetlist(keys.setlist, act, city, date);
+        const rows = await searchSetlist(act, city, date);
         if (!rows.length) {
           statusEl.textContent = "No match. What you typed stays.";
           return;
@@ -457,7 +453,13 @@
       `<button type="button" class="choice" data-i="${i}">${esc(row.label)}</button>`
     ).join("");
     choices.querySelectorAll("button").forEach((btn) => {
-      btn.addEventListener("click", () => onPick(rows[Number(btn.dataset.i)]));
+      btn.addEventListener("click", () => {
+        const row = rows[Number(btn.dataset.i)];
+        choices.innerHTML = "";
+        const status = document.querySelector("#lookup-status");
+        if (status) status.textContent = "";
+        onPick(row);
+      });
     });
   }
 
@@ -527,13 +529,13 @@
     return `${m[3]}-${m[2]}-${m[1]}`;
   }
 
-  async function searchSetlist(key, act, city, date) {
+  async function searchSetlist(act, city, date) {
     const params = new URLSearchParams({ artistName: act });
     if (city) params.set("cityName", city);
     const sd = isoToSetlistDate(date);
     if (sd) params.set("date", sd);
-    const res = await fetch("https://api.setlist.fm/rest/1.0/search/setlists?" + params.toString(), {
-      headers: { Accept: "application/json", "x-api-key": key },
+    const res = await fetch(SETLIST_RELAY + "?" + params.toString(), {
+      headers: { Accept: "application/json" },
     });
     if (!res.ok) throw new Error("setlist");
     const data = await res.json();
@@ -653,10 +655,8 @@
     const keys = readKeys();
     app.innerHTML = `
       <h1>Settings</h1>
-      <p>Keys stay in this browser and are not in the backup file. A lookup sends that key to setlist.fm, Ticketmaster, or SeatGeek. This page has no server of its own.</p>
+      <p>PLACEHOLDER Concert lookup goes through a FreeRangeShows relay. The setlist.fm key is not kept in this browser or in the backup file. Ticketmaster and SeatGeek keys stay in this browser and are not in the backup file. A lookup sends those keys to Ticketmaster or SeatGeek. This page has no server of its own for nights.</p>
       <form id="keys-form">
-        <label for="setlist">setlist.fm key</label>
-        <input id="setlist" type="password" autocomplete="off" value="${esc(keys.setlist)}">
         <label for="ticketmaster">Ticketmaster Discovery key</label>
         <input id="ticketmaster" type="password" autocomplete="off" value="${esc(keys.ticketmaster)}">
         <label for="seatgeek">SeatGeek client id</label>
@@ -683,7 +683,6 @@
     document.querySelector("#keys-form").addEventListener("submit", (event) => {
       event.preventDefault();
       writeKeys({
-        setlist: document.querySelector("#setlist").value.trim(),
         ticketmaster: document.querySelector("#ticketmaster").value.trim(),
         seatgeek: document.querySelector("#seatgeek").value.trim(),
       });

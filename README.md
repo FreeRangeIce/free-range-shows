@@ -15,3 +15,7 @@ Published from main. The page is https://freerangeice.github.io/free-range-shows
 ## Not in this commit
 
 The link back from FreeRangeMedia is not added there. Public wording marked PLACEHOLDER is for Berean.
+
+## Concert lookup
+
+Concert Lookup calls a Cloudflare Worker at `https://frs-setlist.freerangeice.workers.dev/setlists`. The setlist.fm key is a Worker secret, not a Settings field and not in backups.
