@@ -110,10 +110,16 @@ input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
   display: block;
-  line-height: normal;
+  line-height: inherit;
   text-align: left;
 }
 input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+/* Same height as City / Venue: drop the inner padding WebKit adds around the date parts. */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field { padding-block: 0; }
 /* Square selects with one custom chevron, the same size and right inset on every select. */
 select {
   -webkit-appearance: none;
