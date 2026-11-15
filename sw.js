@@ -1,4 +1,4 @@
-const CACHE = "free-range-shows-v9";
+const CACHE = "free-range-shows-v10";
 const SHELL = ["./index.html", "./styles.css", "./app.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {

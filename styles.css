@@ -174,3 +174,56 @@ textarea { min-height: 6rem; resize: vertical; }
   .top, main, .foot { padding-left: 1.5rem; padding-right: 1.5rem; }
   main, .foot { max-width: 46rem; }
 }
+
+/* Empty Home: center the empty state between the nav and the one-line footer. */
+body.is-empty-home { display: flex; flex-direction: column; }
+body.is-empty-home main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+body.is-empty-home .foot { width: 100%; }
+.empty { width: 100%; }
+.empty .quiet { margin: 0; }
+.btn-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 1.5rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--blood);
+  background: var(--blood);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.btn-add:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+/* Footer: one muted line with a More disclosure. */
+.foot-more summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+.foot-more summary::-webkit-details-marker { display: none; }
+.foot-more summary::marker { content: ""; }
+.foot-more summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.foot-more .more {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.foot-more[open] .more { text-decoration-thickness: 2px; }
+.more-body p { line-height: 1.45; margin: 0.7em 0; }
+.more-body p:first-child { margin-top: 0.25rem; }
+.more-body p:last-child { margin-bottom: 0; }

@@ -230,6 +230,7 @@
 
   function render() {
     markNav();
+    document.body.classList.remove("is-empty-home");
     const r = route();
     if (r.name === "night") renderNight(r.id);
     else if (r.name === "act") renderAct(r.key);
@@ -250,14 +251,19 @@
             <span class="chart-track"><span class="chart-bar" style="width:${width}%"></span></span>
           </button></li>`;
         }).join("")}</ol>`
-      : `<p class="quiet">No attended nights yet. Want does not count.</p>`;
+      : `<p class="quiet">No attended shows or events yet.</p>`;
     const list = nights.length
       ? `<ul class="night-list">${nights.map((n) => `<li><a href="#/night/${encodeURIComponent(n.id)}">
           <strong>${esc(n.date || "No date")}</strong> ${esc(n.city || "")} ${esc(n.venue || "")}
           <small>${esc(n.status)} · ${esc((n.bill || []).join(", ") || n.kind)}</small>
         </a></li>`).join("")}</ul>`
-      : `<p class="quiet">No nights saved.</p>`;
-    app.innerHTML = `<h1>Nights</h1>${chart}<h2>All nights</h2>${list}`;
+      : `<p class="quiet">No shows or events saved.</p>`;
+    const empty = !store.nights.length;
+    document.body.classList.toggle("is-empty-home", empty);
+    app.innerHTML = empty
+      ? `<div class="empty"><h1>Shows/Events</h1>${chart}<h2>All shows/events</h2>${list}
+          <a class="btn-add" href="#/night/new">Add show/event</a></div>`
+      : `<h1>Shows/Events</h1>${chart}<h2>All shows/events</h2>${list}`;
     app.querySelectorAll("[data-act]").forEach((btn) => {
       btn.addEventListener("click", () => go("#/act/" + encodeURIComponent(btn.dataset.act)));
     });
@@ -841,6 +847,13 @@
   }
 
   window.addEventListener("hashchange", render);
+  const footMore = document.querySelector(".foot-more");
+  if (footMore) {
+    const sum = footMore.querySelector("summary");
+    const sync = () => sum.setAttribute("aria-expanded", footMore.open ? "true" : "false");
+    footMore.addEventListener("toggle", sync);
+    sync();
+  }
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_KEY) return;
     const name = route().name;
