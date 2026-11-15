@@ -879,7 +879,63 @@
   });
   render();
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  /* "A new version is ready." sw.js uses skipWaiting + clients.claim, so a later
+   * release fires controllerchange on an already-open page (including a resumed
+   * home-screen app). Offer Reload; never reload on its own. The first install
+   * also claims the page, and that is not an update.
+   */
+  let swHadController = false;
+  let updateReady = false;
+
+  function updateBannerShown() {
+    const el = document.getElementById("update-banner");
+    return Boolean(el && !el.hidden);
   }
+
+  function anyDialogOpen() {
+    return Boolean(document.querySelector("dialog[open]"));
+  }
+
+  function maybeShowUpdateBanner() {
+    if (!updateReady || updateBannerShown() || anyDialogOpen()) return;
+    const banner = document.getElementById("update-banner");
+    if (!banner) return;
+    const text = document.getElementById("update-banner-text");
+    if (text) text.textContent = "A new version is ready.";
+    banner.hidden = false;
+  }
+
+  function onControllerChange() {
+    if (!swHadController) {
+      swHadController = true;
+      return;
+    }
+    updateReady = true;
+    maybeShowUpdateBanner();
+  }
+
+  function watchForUpdates() {
+    if (!("serviceWorker" in navigator)) return;
+    swHadController = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+    document.addEventListener("close", (event) => {
+      if (event.target && event.target.tagName === "DIALOG") maybeShowUpdateBanner();
+    }, true);
+    const btn = document.getElementById("btn-update-reload");
+    if (btn) btn.addEventListener("click", () => location.reload());
+  }
+
+  function registerSW() {
+    if (!("serviceWorker" in navigator)) return;
+    if (!/^https?:$/.test(location.protocol)) return;
+    navigator.serviceWorker.register("./sw.js").then((reg) => {
+      reg.update().catch(() => {});
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") reg.update().catch(() => {});
+      });
+    }).catch(() => {});
+  }
+
+  watchForUpdates();
+  registerSW();
 })();

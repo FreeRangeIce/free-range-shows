@@ -231,3 +231,44 @@ body.is-empty-home .foot { width: 100%; }
 .more-body p { line-height: 1.45; margin: 0.7em 0; }
 .more-body p:first-child { margin-top: 0.25rem; }
 .more-body p:last-child { margin-bottom: 0; }
+
+/* The hidden attribute always wins over display rules on the update banner. */
+[hidden] { display: none !important; }
+
+/* New-version banner: in normal flow under the header, never a fixed overlay,
+   so it cannot cover the empty-home Add show/event button. */
+.update-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  width: 100%;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  animation: update-banner-in 0.2s ease-out;
+}
+.update-banner p {
+  margin: 0;
+  flex: 1 1 10rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.update-banner #btn-update-reload {
+  min-height: 44px;
+  min-width: 44px;
+  flex: 0 0 auto;
+}
+@keyframes update-banner-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-banner { animation: none; }
+}
+@media (min-width: 768px) {
+  .update-banner { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
