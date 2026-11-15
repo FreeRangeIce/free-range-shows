@@ -298,7 +298,7 @@
     const night = existing ? { ...existing } : blankNight();
     const isNew = !existing;
     app.innerHTML = `
-      <h1>${isNew ? "Add a night" : "Edit night"}</h1>
+      <h1>${isNew ? "Add a show/event" : "Edit show/event"}</h1>
       <form id="night-form">
         <label for="kind">Kind</label>
         <select id="kind">${KINDS.map((k) => `<option${k === night.kind ? " selected" : ""}>${esc(k)}</option>`).join("")}</select>
@@ -389,7 +389,7 @@
         n.id !== next.id && n.date === next.date && norm(n.venue) && norm(n.venue) === norm(next.venue)
       );
       if (dup) {
-        statusEl.textContent = "Another night is already saved for this date and venue. Saving anyway.";
+        statusEl.textContent = "Another show/event is already saved for this date and venue. Saving anyway.";
         statusEl.className = "status";
       }
       upsertNight(next);
@@ -411,11 +411,11 @@
           );
           if (!others) losingPhotoActs.push(key);
         }
-        let msg = "Delete this night?";
+        let msg = "Delete this show/event?";
         if (losingPhotoActs.length === 1) {
-          msg = "Delete this night? It is the last night for this act, so its photo is deleted too.";
+          msg = "Delete this show/event? It is the last show/event for this act, so its photo is deleted too.";
         } else if (losingPhotoActs.length > 1) {
-          msg = "Delete this night? It is the last night for these acts, so their photos are deleted too.";
+          msg = "Delete this show/event? It is the last show/event for these acts, so their photos are deleted too.";
         }
         if (!window.confirm(msg)) return;
         deleteNight(night.id);
@@ -455,7 +455,7 @@
           return;
         }
         showChoices(choices, rows, (row) => applySetlist(form, night, row));
-        statusEl.textContent = "Pick the night.";
+        statusEl.textContent = "Pick the show/event.";
       } catch (err) {
         statusEl.textContent = "setlist.fm did not answer. What you typed stays.";
         statusEl.className = "status error";
@@ -474,7 +474,7 @@
         const rows = await searchTicketmaster(keys.ticketmaster, query, city, date);
         if (rows.length) {
           showChoices(choices, rows, (row) => applyEvent(form, row));
-          statusEl.textContent = "Pick the night.";
+          statusEl.textContent = "Pick the show/event.";
           return;
         }
       } catch {
@@ -486,7 +486,7 @@
         const rows = await searchSeatGeek(keys.seatgeek, query, city);
         if (rows.length) {
           showChoices(choices, rows, (row) => applyEvent(form, row));
-          statusEl.textContent = "Pick the night.";
+          statusEl.textContent = "Pick the show/event.";
           return;
         }
       } catch {
@@ -495,7 +495,7 @@
       }
     }
     if (!keys.ticketmaster && !keys.seatgeek) {
-      statusEl.textContent = "Add a Ticketmaster or SeatGeek key in Settings. The night stays as typed.";
+      statusEl.textContent = "Add a Ticketmaster or SeatGeek key in Settings. The show/event stays as typed.";
       return;
     }
     statusEl.textContent = tmError
@@ -681,7 +681,7 @@
       <h1>${esc(name)}</h1>
       ${photoBlock}
       <p>${esc(kind)}</p>
-      <p>${stats ? `${stats.nights} attended night${stats.nights === 1 ? "" : "s"}` : "No attended nights"}</p>
+      <p>${stats ? `${stats.nights} attended show${stats.nights === 1 ? "/event" : "s/events"}` : "No attended shows/events"}</p>
       <p>${stats && stats.last ? `Last seen ${esc(stats.last)}` : "Not seen yet"}</p>
       <form id="photo-form">
         <label for="photo">Photo URL</label>
@@ -728,7 +728,7 @@
       <input id="restore-file" type="file" accept="application/json,.json" hidden>
       <p id="backup-status" class="status" role="status"></p>
       <dialog class="dialog" id="restore-dialog">
-        <p>Replace all nights on this device with this file?</p>
+        <p>Replace all shows/events on this device with this file?</p>
         <div class="btn-row">
           <button class="btn btn-primary" type="button" id="restore-yes">Replace</button>
           <button class="btn" type="button" id="restore-no">Cancel</button>
@@ -797,7 +797,7 @@
       return;
     }
     if (!Array.isArray(data.nights)) {
-      status.textContent = "This backup has no nights list. Nothing changed.";
+      status.textContent = "This backup has no shows/events list. Nothing changed.";
       status.className = "status error";
       return;
     }
@@ -817,7 +817,7 @@
       const line = document.querySelector("#backup-status");
       if (line) {
         line.className = "status";
-        line.textContent = `Restored ${nights.length} nights.`;
+        line.textContent = `Restored ${nights.length} ${nights.length === 1 ? "show/event" : "shows/events"}.`;
       }
     };
     dialog.showModal();
