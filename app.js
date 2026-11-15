@@ -261,7 +261,8 @@
     const empty = !store.nights.length;
     document.body.classList.toggle("is-empty-home", empty);
     app.innerHTML = empty
-      ? `<div class="empty"><h1>Shows/Events</h1>${chart}<h2>All shows/events</h2>${list}
+      ? `<div class="empty"><h1>Shows/Events</h1>
+          <p class="quiet">No shows or events yet.</p>
           <a class="btn-add" href="#/night/new">Add show/event</a></div>`
       : `<h1>Shows/Events</h1>${chart}<h2>All shows/events</h2>${list}`;
     app.querySelectorAll("[data-act]").forEach((btn) => {
@@ -847,13 +848,29 @@
   }
 
   window.addEventListener("hashchange", render);
+  function blurAfterPointer(el) {
+    if (!el) return;
+    el.addEventListener("pointerup", (event) => {
+      if (event.pointerType === "mouse" || event.pointerType === "touch" || event.pointerType === "pen") {
+        requestAnimationFrame(() => el.blur());
+      }
+    });
+  }
   const footMore = document.querySelector(".foot-more");
   if (footMore) {
     const sum = footMore.querySelector("summary");
     const sync = () => sum.setAttribute("aria-expanded", footMore.open ? "true" : "false");
     footMore.addEventListener("toggle", sync);
+    blurAfterPointer(sum);
     sync();
   }
+  document.addEventListener("pointerup", (event) => {
+    const btn = event.target.closest && event.target.closest(".btn-add");
+    if (!btn) return;
+    if (event.pointerType === "mouse" || event.pointerType === "touch" || event.pointerType === "pen") {
+      requestAnimationFrame(() => btn.blur());
+    }
+  });
   window.addEventListener("storage", (event) => {
     if (event.key !== STORAGE_KEY) return;
     const name = route().name;
